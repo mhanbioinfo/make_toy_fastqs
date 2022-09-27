@@ -124,8 +124,8 @@ R2.joined = read.table(R2.joined.fpath, sep = '\t', header = F, comment.char="")
 read_len = R2.joined$V3 %>% nchar() %>% unique()
 R2.newEnd =
   R2.joined %>%
-  mutate(end = if_else(nchar(V9) == 3, V7 + read_len - (3+1) - 1,
-                       if_else(nchar(V9) == 4, V7 + read_len - (4+1) - 1, 0)))
+  mutate(end = if_else(nchar(V10) == 3, V7 + read_len - (3+1) - 1,                 ## R2 is V10, uses the other UMI
+                       if_else(nchar(V10) == 4, V7 + read_len - (4+1) - 1, 0)))
 
 ## dataframe to granges so can use DNAStringSet()
 R2.gr =
@@ -141,7 +141,7 @@ R2.hg38seq =
   data.frame(chr = R2.gr %>% seqnames(),
              start = R2.gr %>% start(),
              end = R2.gr %>% end(), ## does start end have to reverse for R2??
-             umi = R2.gr$V10, ## R2 use the other UMI
+             umi = R2.gr$V10, ## R2 is V10, uses the other UMI
              sequence = R2.gr$hg38seq,
              spacer = R2.gr$V4,
              phred = R2.gr$V5) %>%

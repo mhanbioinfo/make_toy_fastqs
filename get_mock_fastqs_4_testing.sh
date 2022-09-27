@@ -15,8 +15,8 @@
 echo "Job started at "$(date) 
 time1=$(date +%s)
 
-DATA_DIR="/cluster/projects/pughlab/projects/cfMeDIP_compare_pipelines/data"
-OUT_DIR="/cluster/projects/pughlab/projects/cfMeDIP_compare_pipelines/get_mock_fastqs_4_testing/outputs"
+DATA_DIR="/path/to/fastqs/and/bedpes/"
+OUT_DIR="/path/to/output/directory/"
 TMP_DIR="${OUT_DIR}/TMP"
 mkdir -p $TMP_DIR
 
@@ -28,12 +28,12 @@ SHUF_SEED=42
 
 echo "Pivot fastq files."
 ## pivot wide FASTQs to get Phred
-SAMPLE1_FASTQ_R1_FNAME="CMP-01-02-cfDNA-03_lib1_R1.fastq.gz"
-SAMPLE1_FASTQ_R2_FNAME="CMP-01-02-cfDNA-03_lib1_R2.fastq.gz"
-SAMPLE2_FASTQ_R1_FNAME="CMP-01-02-cfDNA-04_lib1_R1.fastq.gz"
-SAMPLE2_FASTQ_R2_FNAME="CMP-01-02-cfDNA-04_lib1_R2.fastq.gz"
-SAMPLE3_FASTQ_R1_FNAME="CMP-01-02-cfDNA-05_lib1_R1.fastq.gz"
-SAMPLE3_FASTQ_R2_FNAME="CMP-01-02-cfDNA-05_lib1_R2.fastq.gz"
+SAMPLE1_FASTQ_R1_FNAME="sample1_R1.fastq.gz"
+SAMPLE1_FASTQ_R2_FNAME="sample1_R2.fastq.gz"
+SAMPLE2_FASTQ_R1_FNAME="sample2_R1.fastq.gz"
+SAMPLE2_FASTQ_R2_FNAME="sample2_R2.fastq.gz"
+SAMPLE3_FASTQ_R1_FNAME="sample3_R1.fastq.gz"
+SAMPLE3_FASTQ_R2_FNAME="sample3_R2.fastq.gz"
 
 SAMPLES_FASTQ_ARR=( ${SAMPLE1_FASTQ_R1_FNAME} ${SAMPLE1_FASTQ_R2_FNAME}
                     ${SAMPLE2_FASTQ_R1_FNAME} ${SAMPLE2_FASTQ_R2_FNAME}
@@ -54,9 +54,9 @@ done
 
 echo "Grab Chr Start End FragName columns from BEDPE file."
 ## grab chr start end from bedpe.gz
-SAMPLE1_BEDPE_FNAME="CMP-01-02-cfDNA-03.bedpe.gz"
-SAMPLE2_BEDPE_FNAME="CMP-01-02-cfDNA-04.bedpe.gz"
-SAMPLE3_BEDPE_FNAME="CMP-01-02-cfDNA-05.bedpe.gz"
+SAMPLE1_BEDPE_FNAME="sample1.bedpe.gz"
+SAMPLE2_BEDPE_FNAME="sample2.bedpe.gz"
+SAMPLE3_BEDPE_FNAME="sample3.bedpe.gz"
 SAMPLES_BEDPE_ARR=( ${SAMPLE1_BEDPE_FNAME} ${SAMPLE2_BEDPE_FNAME} ${SAMPLE3_BEDPE_FNAME} )
 
 #for SAMPLE_FNAME in "${SAMPLES_BEDPE_ARR[@]:0:1}" ; do

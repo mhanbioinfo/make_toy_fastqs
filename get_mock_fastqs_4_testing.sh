@@ -18,7 +18,7 @@ time1=$(date +%s)
 ## set params #####################################
 
 DATA_DIR="/cluster/projects/pughlab/projects/cfMeDIP_compare_pipelines/data"
-OUT_DIR="/cluster/projects/pughlab/projects/cfMeDIP_compare_pipelines/get_mock_fastqs_4_testing/outputs"
+OUT_DIR="/cluster/projects/pughlab/projects/cfMeDIP_compare_pipelines/get_mock_fastqs_4_testing/output_allchrs"
 TMP_DIR="${OUT_DIR}/TMP"
 mkdir -p $TMP_DIR
 
@@ -26,7 +26,7 @@ FASTQ_FLIST_PATH="/cluster/home/t110409uhn/git/make_toy_fastqs/backups/fastq_fli
 BEDPE_FLIST_PATH="/cluster/home/t110409uhn/git/make_toy_fastqs/backups/bedpe_flist.bak"
 
 ## chromosome to sample
-CHR="chr21"
+CHR="all"
 
 ## lines in BEDPE, so 400K*2reads*3samples=2.5m reads
 NUM_LINES=400000
@@ -34,6 +34,8 @@ NUM_LINES=400000
 ## seed for repeatable shuffle
 SHUF_SEED=42
 
+## chr_list for subsetting
+CHR_LIST="/cluster/home/t110409uhn/git/make_toy_fastqs/chr_list.txt"
 
 ###################################################
 
@@ -43,17 +45,17 @@ echo "Pivot fastq files."
 FASTQ_FLIST=$(cat ${FASTQ_FLIST_PATH} | tr "\n" " ")
 SAMPLES_FASTQ_ARR=($FASTQ_FLIST)
 
-#for SAMPLE_FASTQ_R_FNAME in "${SAMPLES_FASTQ_ARR[@]:0:2}" ; do
-for SAMPLE_FASTQ_R_FNAME in "${SAMPLES_FASTQ_ARR[@]}" ; do
-    echo "Processing ${SAMPLE_FASTQ_R_FNAME}"
-    
-    SAMPLE_FASTQ_R_PIVOT_FNAME="${SAMPLE_FASTQ_R_FNAME%.fastq.gz}.fastq.pivot.sortd"
-    zcat ${DATA_DIR}/${SAMPLE_FASTQ_R_FNAME} \
-        | paste -d$'\t' - - - - \
-        | sed 's/ /\t/' \
-        | sort -k1,1 \
-        > ${TMP_DIR}/${SAMPLE_FASTQ_R_PIVOT_FNAME}
-done
+##for SAMPLE_FASTQ_R_FNAME in "${SAMPLES_FASTQ_ARR[@]:0:2}" ; do
+#for SAMPLE_FASTQ_R_FNAME in "${SAMPLES_FASTQ_ARR[@]}" ; do
+#    echo "Processing ${SAMPLE_FASTQ_R_FNAME}"
+#    
+#    SAMPLE_FASTQ_R_PIVOT_FNAME="${SAMPLE_FASTQ_R_FNAME%.fastq.gz}.fastq.pivot.sortd"
+#    zcat ${DATA_DIR}/${SAMPLE_FASTQ_R_FNAME} \
+#        | paste -d$'\t' - - - - \
+#        | sed 's/ /\t/' \
+#        | sort -k1,1 \
+#        > ${TMP_DIR}/${SAMPLE_FASTQ_R_PIVOT_FNAME}
+#done
 
 
 echo "Grab Chr Start End FragName Strand columns from BEDPE file."
@@ -66,9 +68,11 @@ SAMPLES_BEDPE_ARR=($BEDPE_FLIST)
 for SAMPLE_FNAME in "${SAMPLES_BEDPE_ARR[@]}" ; do
     echo "Processing ${SAMPLE_FNAME}"
     
+    # | awk 'BEGIN {OFS="\t"} ($1 == "chr21" && $4 == "chr21") {print $1,$2,$3,$4,$5,$6,"@"$7,$10,$11}' 
     SAMPLE_CHR_SHUF_BED_FNAME="${SAMPLE_FNAME%.bedpe.gz*}.${CHR}.shuf${SHUF_SEED}.bedpe"
     zcat ${DATA_DIR}/${SAMPLE_FNAME} \
-        | awk 'BEGIN {OFS="\t"} ($1 == "chr21" && $4 == "chr21") {print $1,$2,$3,$4,$5,$6,"@"$7,$10,$11}' \
+        | awk 'BEGIN {OFS="\t"} ($1 == $4) {print $1,$2,$3,$4,$5,$6,"@"$7,$10,$11}' \
+        | awk 'FNR==NR {a[$1]; next}; $1 in a' ${CHR_LIST} - \
         | shuf -n ${NUM_LINES} --random-source=<(yes ${SHUF_SEED}) \
         > ${TMP_DIR}/${SAMPLE_CHR_SHUF_BED_FNAME}
 
@@ -131,8 +135,8 @@ echo "Concatenating fastqs from all samples subsampled, for R1, then R2."
 ## cat all fastqs for R1, then R2
 
 SAMPLE_INDEX2="${SAMPLE_INDEX//:/}"
-R1_FASTQ_FNAME="test_sample_shuf${SHUF_SEED}_hg38_${SAMPLE_INDEX2}.R1.fastq.gz"
-R2_FASTQ_FNAME="test_sample_shuf${SHUF_SEED}_hg38_${SAMPLE_INDEX2}.R2.fastq.gz"
+R1_FASTQ_FNAME="test_sample_${CHR}_shuf${SHUF_SEED}_hg38_${SAMPLE_INDEX2}.R1.fastq.gz"
+R2_FASTQ_FNAME="test_sample_${CHR}_shuf${SHUF_SEED}_hg38_${SAMPLE_INDEX2}.R2.fastq.gz"
 
 find ${TMP_DIR} ~+ -type f \
     -name "*R1*${SAMPLE_INDEX2}.fastq" \

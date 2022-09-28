@@ -1,3 +1,4 @@
 *.Rmd
 *logs_slurm*
 *.bak
+backups/

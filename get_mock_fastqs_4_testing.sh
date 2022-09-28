@@ -15,10 +15,18 @@
 echo "Job started at "$(date) 
 time1=$(date +%s)
 
-DATA_DIR="/path/to/fastqs/and/bedpes/"
-OUT_DIR="/path/to/output/directory/"
+## set params #####################################
+
+DATA_DIR="/cluster/projects/pughlab/projects/cfMeDIP_compare_pipelines/data"
+OUT_DIR="/cluster/projects/pughlab/projects/cfMeDIP_compare_pipelines/get_mock_fastqs_4_testing/outputs"
 TMP_DIR="${OUT_DIR}/TMP"
 mkdir -p $TMP_DIR
+
+FASTQ_FLIST_PATH="/cluster/home/t110409uhn/git/make_toy_fastqs/backups/fastq_flist.bak"
+BEDPE_FLIST_PATH="/cluster/home/t110409uhn/git/make_toy_fastqs/backups/bedpe_flist.bak"
+
+## chromosome to sample
+CHR="chr21"
 
 ## lines in BEDPE, so 400K*2reads*3samples=2.5m reads
 NUM_LINES=400000
@@ -26,18 +34,14 @@ NUM_LINES=400000
 ## seed for repeatable shuffle
 SHUF_SEED=42
 
+
+###################################################
+
 echo "Pivot fastq files."
 ## pivot wide FASTQs to get Phred
-SAMPLE1_FASTQ_R1_FNAME="sample1_R1.fastq.gz"
-SAMPLE1_FASTQ_R2_FNAME="sample1_R2.fastq.gz"
-SAMPLE2_FASTQ_R1_FNAME="sample2_R1.fastq.gz"
-SAMPLE2_FASTQ_R2_FNAME="sample2_R2.fastq.gz"
-SAMPLE3_FASTQ_R1_FNAME="sample3_R1.fastq.gz"
-SAMPLE3_FASTQ_R2_FNAME="sample3_R2.fastq.gz"
 
-SAMPLES_FASTQ_ARR=( ${SAMPLE1_FASTQ_R1_FNAME} ${SAMPLE1_FASTQ_R2_FNAME}
-                    ${SAMPLE2_FASTQ_R1_FNAME} ${SAMPLE2_FASTQ_R2_FNAME}
-                    ${SAMPLE3_FASTQ_R1_FNAME} ${SAMPLE3_FASTQ_R2_FNAME} )
+FASTQ_FLIST=$(cat ${FASTQ_FLIST_PATH} | tr "\n" " ")
+SAMPLES_FASTQ_ARR=($FASTQ_FLIST)
 
 #for SAMPLE_FASTQ_R_FNAME in "${SAMPLES_FASTQ_ARR[@]:0:2}" ; do
 for SAMPLE_FASTQ_R_FNAME in "${SAMPLES_FASTQ_ARR[@]}" ; do
@@ -52,35 +56,34 @@ for SAMPLE_FASTQ_R_FNAME in "${SAMPLES_FASTQ_ARR[@]}" ; do
 done
 
 
-echo "Grab Chr Start End FragName columns from BEDPE file."
+echo "Grab Chr Start End FragName Strand columns from BEDPE file."
 ## grab chr start end from bedpe.gz
-SAMPLE1_BEDPE_FNAME="sample1.bedpe.gz"
-SAMPLE2_BEDPE_FNAME="sample2.bedpe.gz"
-SAMPLE3_BEDPE_FNAME="sample3.bedpe.gz"
-SAMPLES_BEDPE_ARR=( ${SAMPLE1_BEDPE_FNAME} ${SAMPLE2_BEDPE_FNAME} ${SAMPLE3_BEDPE_FNAME} )
+
+BEDPE_FLIST=$(cat ${BEDPE_FLIST_PATH} | tr "\n" " ")
+SAMPLES_BEDPE_ARR=($BEDPE_FLIST)
 
 #for SAMPLE_FNAME in "${SAMPLES_BEDPE_ARR[@]:0:1}" ; do
 for SAMPLE_FNAME in "${SAMPLES_BEDPE_ARR[@]}" ; do
     echo "Processing ${SAMPLE_FNAME}"
     
-    SAMPLE_CHR21_SHUF_BED_FNAME="${SAMPLE_FNAME%.bedpe.gz*}.chr21.shuf${SHUF_SEED}.bedpe"
+    SAMPLE_CHR_SHUF_BED_FNAME="${SAMPLE_FNAME%.bedpe.gz*}.${CHR}.shuf${SHUF_SEED}.bedpe"
     zcat ${DATA_DIR}/${SAMPLE_FNAME} \
-        | awk 'BEGIN {OFS="\t"} ($1 == "chr21" && $4 == "chr21") {print $1,$2,$3,$4,$5,$6,"@"$7}' \
+        | awk 'BEGIN {OFS="\t"} ($1 == "chr21" && $4 == "chr21") {print $1,$2,$3,$4,$5,$6,"@"$7,$10,$11}' \
         | shuf -n ${NUM_LINES} --random-source=<(yes ${SHUF_SEED}) \
-        > ${TMP_DIR}/${SAMPLE_CHR21_SHUF_BED_FNAME}
+        > ${TMP_DIR}/${SAMPLE_CHR_SHUF_BED_FNAME}
 
-    SAMPLE_CHR21_SHUF_BED_R1_FNAME="${SAMPLE_CHR21_SHUF_BED_FNAME%.*}.R1.bed.sortd"
-    SAMPLE_CHR21_SHUF_BED_R2_FNAME="${SAMPLE_CHR21_SHUF_BED_FNAME%.*}.R2.bed.sortd"
-    cat ${TMP_DIR}/${SAMPLE_CHR21_SHUF_BED_FNAME} \
-        | awk 'BEGIN {OFS="\t"} {print $1,$2,$3,$7}' \
+    SAMPLE_CHR_SHUF_BED_R1_FNAME="${SAMPLE_CHR_SHUF_BED_FNAME%.*}.R1.bed.sortd"
+    SAMPLE_CHR_SHUF_BED_R2_FNAME="${SAMPLE_CHR_SHUF_BED_FNAME%.*}.R2.bed.sortd"
+    cat ${TMP_DIR}/${SAMPLE_CHR_SHUF_BED_FNAME} \
+        | awk 'BEGIN {OFS="\t"} {print $1,$2,$3,$7,$8}' \
         | sed 's/|/\t/' | sed 's/\./\t/' \
         | sort -k4,4 \
-        > ${TMP_DIR}/${SAMPLE_CHR21_SHUF_BED_R1_FNAME}
-    cat ${TMP_DIR}/${SAMPLE_CHR21_SHUF_BED_FNAME} \
-        | awk 'BEGIN {OFS="\t"} {print $4,$5,$6,$7}' \
+        > ${TMP_DIR}/${SAMPLE_CHR_SHUF_BED_R1_FNAME}
+    cat ${TMP_DIR}/${SAMPLE_CHR_SHUF_BED_FNAME} \
+        | awk 'BEGIN {OFS="\t"} {print $4,$5,$6,$7,$9}' \
         | sed 's/|/\t/' | sed 's/\./\t/' \
         | sort -k4,4 \
-        > ${TMP_DIR}/${SAMPLE_CHR21_SHUF_BED_R2_FNAME}
+        > ${TMP_DIR}/${SAMPLE_CHR_SHUF_BED_R2_FNAME}
 done
 
 
@@ -91,29 +94,29 @@ echo "Joining pivoted sorted FASTQ and sorted BED, then convert to fastqs."
 module load R/4.1
 ## need packages: tidyverse, ggplot2, GenomicFeatures, BSgenome.Hsapiens.UCSC.hg38
 
-RSCRIPT_PATH="/cluster/home/t110409uhn/git/make_toy_fastqs/shuffled_joined_to_fastq_v1.R"
-AMPLE_INDEX="ACTGACTG:ACTGACTG"
+RSCRIPT_PATH="/cluster/home/t110409uhn/git/make_toy_fastqs/shuffled_joined_to_fastq_v3.R"
+SAMPLE_INDEX="ACTGACTG:ACTGACTG"
 
 #for SAMPLE_FNAME in "${SAMPLES_BEDPE_ARR[@]:0:1}" ; do
 for SAMPLE_FNAME in "${SAMPLES_BEDPE_ARR[@]}" ; do
     echo "Processing ${SAMPLE_FNAME%.bedpe.gz*}"
 
-    SAMPLE_CHR21_SHUF_BED_R1_FNAME="${SAMPLE_FNAME%.bedpe.gz*}.chr21.shuf.R1.bed.sortd"
-    SAMPLE_CHR21_SHUF_BED_R2_FNAME="${SAMPLE_FNAME%.bedpe.gz*}.chr21.shuf.R2.bed.sortd"
+    SAMPLE_CHR_SHUF_BED_R1_FNAME="${SAMPLE_FNAME%.bedpe.gz*}.${CHR}.shuf${SHUF_SEED}.R1.bed.sortd"
+    SAMPLE_CHR_SHUF_BED_R2_FNAME="${SAMPLE_FNAME%.bedpe.gz*}.${CHR}.shuf${SHUF_SEED}.R2.bed.sortd"
 
     SAMPLE_FASTQ_R_PIVOT_R1_FNAME="${SAMPLE_FNAME%.bedpe.gz*}_lib1_R1.fastq.pivot.sortd"
     SAMPLE_FASTQ_R_PIVOT_R2_FNAME="${SAMPLE_FNAME%.bedpe.gz*}_lib1_R2.fastq.pivot.sortd"
 
-    SAMPLE_R1_JOINED="${SAMPLE_FNAME%.bedpe.gz*}.chr21.shuf.R1.joined"
-    SAMPLE_R2_JOINED="${SAMPLE_FNAME%.bedpe.gz*}.chr21.shuf.R2.joined"
+    SAMPLE_R1_JOINED="${SAMPLE_FNAME%.bedpe.gz*}.${CHR}.shuf${SHUF_SEED}.R1.joined"
+    SAMPLE_R2_JOINED="${SAMPLE_FNAME%.bedpe.gz*}.${CHR}.shuf${SHUF_SEED}.R2.joined"
 
     join -t $'\t' -1 1 -2 4 \
         ${TMP_DIR}/${SAMPLE_FASTQ_R_PIVOT_R1_FNAME} \
-        ${TMP_DIR}/${SAMPLE_CHR21_SHUF_BED_R1_FNAME} \
+        ${TMP_DIR}/${SAMPLE_CHR_SHUF_BED_R1_FNAME} \
         > ${TMP_DIR}/${SAMPLE_R1_JOINED}
     join -t $'\t' -1 1 -2 4 \
         ${TMP_DIR}/${SAMPLE_FASTQ_R_PIVOT_R2_FNAME} \
-        ${TMP_DIR}/${SAMPLE_CHR21_SHUF_BED_R2_FNAME} \
+        ${TMP_DIR}/${SAMPLE_CHR_SHUF_BED_R2_FNAME} \
         > ${TMP_DIR}/${SAMPLE_R2_JOINED}
 
     Rscript ${RSCRIPT_PATH} \

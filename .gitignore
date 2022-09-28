@@ -2,3 +2,4 @@
 *logs_slurm*
 *.bak
 backups/
+._*

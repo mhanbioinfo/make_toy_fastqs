@@ -22,11 +22,11 @@ suppressPackageStartupMessages(require(BSgenome.Hsapiens.UCSC.hg38))
 # provider: UCSC
 # release date: Feb 2019
 
-#args = list()
-#args$R1_fpath = "./CMP-01-02-cfDNA-03.chr21.shuf42.R1.joined"
-#args$R2_fpath = "./CMP-01-02-cfDNA-03.chr21.shuf42.R2.joined"
-#args$output_dir = "./"
-#args$sample_index = "ABCDEFGH:ABCDEFGH"
+# args = list()
+# args$R1_fpath = "/Users/minghan/Desktop/pughlab_mount/projects/cfMeDIP_compare_pipelines/make_toy_fastqs_outputs/output_allchrs/TMP/CMP-01-02-cfDNA-03.all.shuf111.R1.joined"
+# args$R2_fpath = "/Users/minghan/Desktop/pughlab_mount/projects/cfMeDIP_compare_pipelines/make_toy_fastqs_outputs/output_allchrs/TMP/CMP-01-02-cfDNA-03.all.shuf111.R2.joined"
+# args$output_dir = "/Users/minghan/Desktop"
+# args$sample_index = "ABCDEFGH:ABCDEFGH"
 
 R1.joined.fpath = args$R1_fpath
 R2.joined.fpath = args$R2_fpath
@@ -46,8 +46,9 @@ if (!is.null(args$sample_index)){
 }
 
 R1.out.fname = paste0(basename(R1.joined.fpath) %>% gsub("joined","hg38.",.), gsub(":","",sample_index), ".fastq")
+# R1.out.fname
 R2.out.fname = paste0(basename(R2.joined.fpath) %>% gsub("joined","hg38.",.), gsub(":","",sample_index), ".fastq")
-
+# R2.out.fname
 
 ## R1 #########################################################################
 
@@ -55,12 +56,23 @@ R2.out.fname = paste0(basename(R2.joined.fpath) %>% gsub("joined","hg38.",.), gs
 R1.joined = read.table(R1.joined.fpath, sep = '\t', header = F, comment.char="")
 # R1.joined %>% head()
 
+R1.joined.BACs =
+  R1.joined %>%
+  filter(V6 == "F19K16" | V6 == "F24B22")
+# R1.joined.BACs$V6 %>% unique()
+# R1.joined.BACs %>% head()
+
+R1.joined.hg38 =
+  R1.joined %>%
+  filter(V6 != "F19K16" & V6 != "F24B22")
+# R1.joined.hg38 %>% head()
+
 ## extend all to 75bp
 ## ( ideally in both directions, but for now just change 'end'='start'+75,
 ## but have to take into account 3nt UMI + linker )
-read_len = R1.joined$V3 %>% nchar() %>% unique()
+read_len = R1.joined.hg38$V3 %>% nchar() %>% unique()
 R1.newEnd =
-  R1.joined %>%
+  R1.joined.hg38 %>%
   mutate(end = if_else(nchar(V9) == 3, V7 + read_len - (3+1) - 1,
                        if_else(nchar(V9) == 4, V7 + read_len - (4+1) - 1, 0)))
 
@@ -87,12 +99,27 @@ R1.hg38seq =
   mutate(sequence_umi = if_else(R1.gr$V11 == "+", paste0(umi, "T", R1.gr$hg38seq),
                                 if_else(R1.gr$V11 == "-", paste0(umi, "T", reverseComplement(R1.gr$hg38seq)),
                                         "ERROR"))) ## { if -ve strand in bam, have to rev_comp to turn it into FASTQ sequence }
-R1.hg38seq$sequence_umi %>% nchar() %>% unique() # [1] 75
+# R1.hg38seq$sequence_umi %>% nchar() %>% unique() # [1] 75
 # R1.hg38seq %>% head()
+
+R1.joined.BACs.rearranged =
+  data.frame(chr = R1.joined.BACs$V6,
+             start = R1.joined.BACs$V7,
+             end = R1.joined.BACs$V8,
+             umi = R1.joined.BACs$V9,
+             sequence = R1.joined.BACs$V3,
+             spacer = "+",
+             phred = R1.joined.BACs$V5,
+             strand = R1.joined.BACs$V11)
+# R1.joined.BACs.rearranged %>% head()
+
+R1.hg38seq.BAC.rbound = bind_rows(R1.hg38seq, R1.joined.BACs.rearranged)
+# R1.hg38seq.BAC.rbound$chr %>% unique()
+# R1.hg38seq.BAC.rbound %>% head()
 
 ## make dummy frag names
 ## @TEST123:123:TESTING:1:random_4to5:random_4to5:random_4to5 1:N:0:random_8+random_8
-vec_len = nrow(R1.hg38seq)
+vec_len = nrow(R1.hg38seq.BAC.rbound)
 message(paste0("Number of reads subsampled: ", vec_len)) # [1] 400000
 instrument_flowcell = rep("@TEST123:123:TESTING:1", vec_len)
 R1_sample_index = rep(paste0("1:N:0:", sample_index), vec_len)
@@ -109,7 +136,7 @@ R1_frag_names = paste0(instrument_flowcell, ":", flowcell_coord, " ", R1_sample_
 
 ## add frag names to R1
 R1.hg38seq.frag_name =
-  R1.hg38seq %>%
+  R1.hg38seq.BAC.rbound %>%
   dplyr::mutate(frag_names = R1_frag_names) %>%
   dplyr::select(frag_names, sequence_umi, spacer, phred)
 # R1.hg38seq.frag_name %>% head()
@@ -132,12 +159,23 @@ write.table(R1.hg38seq.fastq,
 R2.joined = read.table(R2.joined.fpath, sep = '\t', header = F, comment.char="")
 # R2.joined %>% head()
 
+R2.joined.BACs =
+  R2.joined %>%
+  filter(V6 == "F19K16" | V6 == "F24B22")
+# R2.joined.BACs$V6 %>% unique()
+# R2.joined.BACs %>% head()
+
+R2.joined.hg38 =
+  R2.joined %>%
+  filter(V6 != "F19K16" & V6 != "F24B22")
+# R2.joined.hg38 %>% head()
+
 ## extend all to 75bp
 ## ( ideally in both directions, but for now just change 'end'='start'+75,
 ## but have to take into account 3nt UMI + linker )
-read_len = R2.joined$V3 %>% nchar() %>% unique()
+read_len = R2.joined.hg38$V3 %>% nchar() %>% unique()
 R2.newEnd =
-  R2.joined %>%
+  R2.joined.hg38 %>%
   mutate(end = if_else(nchar(V10) == 3, V7 + read_len - (3+1) - 1,                 ## R2 is V10, uses the other UMI
                        if_else(nchar(V10) == 4, V7 + read_len - (4+1) - 1, 0)))
 
@@ -167,6 +205,21 @@ R2.hg38seq =
 # R2.hg38seq$sequence_umi %>% nchar() %>% unique() # [1] 75
 # R2.hg38seq %>% head()
 
+R2.joined.BACs.rearranged =
+  data.frame(chr = R2.joined.BACs$V6,
+             start = R2.joined.BACs$V7,
+             end = R2.joined.BACs$V8,
+             umi = R2.joined.BACs$V9,
+             sequence = R2.joined.BACs$V3,
+             spacer = "+",
+             phred = R2.joined.BACs$V5,
+             strand = R2.joined.BACs$V11)
+# R2.joined.BACs.rearranged %>% head()
+
+R2.hg38seq.BAC.rbound = bind_rows(R2.hg38seq, R2.joined.BACs.rearranged)
+# R2.hg38seq.BAC.rbound$chr %>% unique()
+# R2.hg38seq.BAC.rbound %>% head()
+
 ## make dummy frag names
 R2_sample_index = rep(paste0("2:N:0:", sample_index), vec_len)
 R2_frag_names = paste0(instrument_flowcell, ":", flowcell_coord, " ", R2_sample_index)
@@ -174,7 +227,7 @@ R2_frag_names = paste0(instrument_flowcell, ":", flowcell_coord, " ", R2_sample_
 
 ## add frag names to R2
 R2.hg38seq.frag_name =
-  R2.hg38seq %>%
+  R2.hg38seq.BAC.rbound %>%
   dplyr::mutate(frag_names = R2_frag_names) %>%
   dplyr::select(frag_names, sequence_umi, spacer, phred)
 # R2.hg38seq.frag_name %>% head()

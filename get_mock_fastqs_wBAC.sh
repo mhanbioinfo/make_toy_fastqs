@@ -94,8 +94,9 @@ echo "New toy sample index is:                         $SAMPLE_INDEX"
 echo "Output path:                                     $OUT_DIR"
 echo "Output filename:                                 $OUT_FNAME"
 
-CHR_LIST="./chr_list_wBAC.txt"
-RSCRIPT_PATH="./shuffled_joined_to_fastq_v3.R"
+CHR_LIST_ALL="./chr_list_wBAC.txt"
+CHR_LIST_BACs="./chr_list_BACs.txt"
+RSCRIPT_PATH="./shuffled_joined_to_fastq_wBAC.R"
 
 TMP_DIR="${OUT_DIR}/TMP"
 mkdir -p $TMP_DIR
@@ -136,9 +137,17 @@ for SAMPLE_FNAME in "${SAMPLES_BEDPE_ARR[@]}" ; do
         SAMPLE_CHR_SHUF_BED_FNAME="${SAMPLE_FNAME%.bedpe.gz*}.${CHR}.shuf${SHUF_SEED}.bedpe"
         zcat ${DATA_DIR}/${SAMPLE_FNAME} \
             | awk 'BEGIN {OFS="\t"} ($1 == $4) {print $1,$2,$3,$4,$5,$6,"@"$7,$10,$11}' \
-            | awk 'FNR==NR {a[$1]; next}; $1 in a' ${CHR_LIST} - \
+            | awk 'FNR==NR {a[$1]; next}; $1 in a' ${CHR_LIST_ALL} - \
             | shuf -n ${NUM_LINES} --random-source=<(yes ${SHUF_SEED}) \
             > ${TMP_DIR}/${SAMPLE_CHR_SHUF_BED_FNAME}
+    elif [ ${CHR} == "BACs" ]; then
+        echo "Subsampling ${CHR} chromosomes..."
+        SAMPLE_CHR_SHUF_BED_FNAME="${SAMPLE_FNAME%.bedpe.gz*}.${CHR}.shuf${SHUF_SEED}.bedpe"
+        zcat ${DATA_DIR}/${SAMPLE_FNAME} \
+            | awk 'BEGIN {OFS="\t"} ($1 == $4) {print $1,$2,$3,$4,$5,$6,"@"$7,$10,$11}' \
+            | awk 'FNR==NR {a[$1]; next}; $1 in a' ${CHR_LIST_BACs} - \
+            > ${TMP_DIR}/${SAMPLE_CHR_SHUF_BED_FNAME}
+            #| shuf -n ${NUM_LINES} --random-source=<(yes ${SHUF_SEED}) \
     else
         echo "Subsampling ${CHR} only..."
         SAMPLE_CHR_SHUF_BED_FNAME="${SAMPLE_FNAME%.bedpe.gz*}.${CHR}.shuf${SHUF_SEED}.bedpe"
@@ -202,8 +211,8 @@ echo "Concatenating fastqs from all samples subsampled, for R1, then R2."
 ## cat all fastqs for R1, then R2
 
 SAMPLE_INDEX2="${SAMPLE_INDEX//:/}"
-R1_FASTQ_FNAME="${OUT_FNAME}_${CHR}_shuf${SHUF_SEED}_hg38_F19K16_F24B22_${SAMPLE_INDEX2}.R1.fastq.gz"
-R2_FASTQ_FNAME="${OUT_FNAME}_${CHR}_shuf${SHUF_SEED}_hg38_F19K16_F24B22_${SAMPLE_INDEX2}.R2.fastq.gz"
+R1_FASTQ_FNAME="${OUT_FNAME}_${CHR}_shuf${SHUF_SEED}_F19K16_F24B22_${SAMPLE_INDEX2}.R1.fastq.gz"
+R2_FASTQ_FNAME="${OUT_FNAME}_${CHR}_shuf${SHUF_SEED}_F19K16_F24B22_${SAMPLE_INDEX2}.R2.fastq.gz"
 
 find ${TMP_DIR} ~+ -type f \
     -name "*R1*${SAMPLE_INDEX2}.fastq" \

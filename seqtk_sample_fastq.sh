@@ -17,19 +17,19 @@ module load seqtk
 echo "Job started at "$(date) 
 time1=$(date +%s)
 
-#IN_DIR="/cluster/projects/pughlab/projects/cfMeDIP_compare_pipelines/make_toy_fastqs_outputs/outputs/output_allchrs/toy_sample2"
-#FQ1=${IN_DIR}/"toy_sample2_all_shuf222_F19K16_F24B22_BBBBBBBB.R1.fastq.gz"
-#FQ2=${IN_DIR}/"toy_sample2_all_shuf222_F19K16_F24B22_BBBBBBBB.R2.fastq.gz"
+IN_DIR="/cluster/projects/pughlab/projects/cfMeDIP_compare_pipelines/make_toy_fastqs_outputs/outputs/output_allchrs/toy_sample2"
+FQ1=${IN_DIR}/"toy_sample2_all_shuf222_F19K16_F24B22_BBBBBBBB.R1.fastq.gz"
+FQ2=${IN_DIR}/"toy_sample2_all_shuf222_F19K16_F24B22_BBBBBBBB.R2.fastq.gz"
 
-IN_DIR="/cluster/projects/pughlab/projects/cfMeDIP_compare_pipelines/make_toy_fastqs_outputs/outputs/output_allchrs/toy_sample1"
-FQ1=${IN_DIR}/"toy_sample1_all_shuf111_F19K16_F24B22_AAAAAAAA.R1.fastq.gz"
-FQ2=${IN_DIR}/"toy_sample1_all_shuf111_F19K16_F24B22_AAAAAAAA.R2.fastq.gz"
+#IN_DIR="/cluster/projects/pughlab/projects/cfMeDIP_compare_pipelines/make_toy_fastqs_outputs/outputs/output_allchrs/toy_sample1"
+#FQ1=${IN_DIR}/"toy_sample1_all_shuf111_F19K16_F24B22_AAAAAAAA.R1.fastq.gz"
+#FQ2=${IN_DIR}/"toy_sample1_all_shuf111_F19K16_F24B22_AAAAAAAA.R2.fastq.gz"
 
 FQ_ARR=($FQ1 $FQ2)
 
 OUT_DIR="${IN_DIR}/seqtk_sampled"
 mkdir -p ${OUT_DIR}
-NUM_READS=50000
+NUM_READS=100000
 
 module load seqtk
 
@@ -37,7 +37,7 @@ module load seqtk
 for FILE in "${FQ_ARR[@]}"; do
     F_NAME="$(basename ${FILE} .fastq.gz)"
     echo "processing ${F_NAME}..."
-    seqtk sample -s42 ${FILE} ${NUM_READS} | gzip -c - > ${OUT_DIR}/${F_NAME}.50k.fastq.gz
+    seqtk sample -s42 ${FILE} ${NUM_READS} | gzip -c - > ${OUT_DIR}/${F_NAME}.100k.fastq.gz
 done
 
 
